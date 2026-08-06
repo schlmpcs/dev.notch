@@ -241,6 +241,23 @@ final class XPCHelperClient: NSObject {
             return false
         }
     }
+
+    // MARK: - Window Focus
+
+    nonisolated func focusWindow(pid: Int32, titleFragment: String) async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.focusWindow(pid, titleFragment: titleFragment) { success in
+                    continuation.resume(returning: success)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
 }
 
 extension Notification.Name {

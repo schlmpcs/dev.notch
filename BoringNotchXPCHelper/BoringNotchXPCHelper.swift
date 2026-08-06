@@ -139,6 +139,42 @@ class BoringNotchXPCHelper: NSObject, BoringNotchXPCHelperProtocol {
         reply(false)
     }
 
+    // MARK: - Window Focus (requires Accessibility)
+
+    @objc func focusWindow(_ pid: Int32, titleFragment: String,
+                           with reply: @escaping (Bool) -> Void) {
+        guard AXIsProcessTrusted() else {
+            reply(false)
+            return
+        }
+        let axApp = AXUIElementCreateApplication(pid_t(pid))
+        var windowsValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+                axApp, kAXWindowsAttribute as CFString, &windowsValue) == .success,
+              let windows = windowsValue as? [AXUIElement]
+        else {
+            reply(false)
+            return
+        }
+
+        for window in windows {
+            var titleValue: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(
+                    window, kAXTitleAttribute as CFString, &titleValue) == .success,
+                  let title = titleValue as? String,
+                  !titleFragment.isEmpty,
+                  title.contains(titleFragment)
+            else { continue }
+
+            AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+            AXUIElementSetAttributeValue(
+                axApp, kAXFocusedWindowAttribute as CFString, window)
+            reply(true)
+            return
+        }
+        reply(false)
+    }
+
     // MARK: - Private helpers for DisplayServices / IOKit access
     private func displayServicesGetBrightness(displayID: CGDirectDisplayID, out: inout Float) -> Bool {
         guard let sym = dlsym(DisplayServicesHandle.handle, "DisplayServicesGetBrightness") else { return false }

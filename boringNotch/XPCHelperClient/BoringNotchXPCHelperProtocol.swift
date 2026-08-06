@@ -20,5 +20,7 @@ import Foundation
     func isScreenBrightnessAvailable(with reply: @escaping (Bool) -> Void)
     func currentScreenBrightness(with reply: @escaping (NSNumber?) -> Void)
     func setScreenBrightness(_ value: Float, with reply: @escaping (Bool) -> Void)
+    // Raise a specific window of an already-running app (requires Accessibility)
+    func focusWindow(_ pid: Int32, titleFragment: String, with reply: @escaping (Bool) -> Void)
 }
 
