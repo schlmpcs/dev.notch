@@ -102,12 +102,18 @@ final class AgentSessionManager: ObservableObject {
         pruneTimer?.invalidate()
     }
 
-    /// Written on every launch rather than only when missing, so the script cannot
-    /// drift out of sync with the parser above after an app update.
+    /// Written only when the on-disk content differs from the current source, so the
+    /// script still cannot drift out of sync with the parser above after an app
+    /// update, but a launch that changes nothing does not rewrite the file. A rewrite
+    /// replaces the file (new inode) and macOS re-quarantines any file a sandboxed app
+    /// writes, so a user who ran `xattr -d com.apple.quarantine` once would otherwise
+    /// have to redo that after every single launch.
     private func installHookScript() {
         let fm = FileManager.default
         do {
             try fm.createDirectory(at: Self.queueDirectory, withIntermediateDirectories: true)
+            let existing = try? String(contentsOf: Self.hookScriptURL, encoding: .utf8)
+            guard existing != Self.hookScript else { return }
             try Self.hookScript.write(to: Self.hookScriptURL, atomically: true, encoding: .utf8)
             try fm.setAttributes([.posixPermissions: 0o755],
                                  ofItemAtPath: Self.hookScriptURL.path)
