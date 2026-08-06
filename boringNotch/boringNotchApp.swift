@@ -290,6 +290,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Defaults[.didMigrateCalendarPanel] = migration.didMigrate
 
         _ = VPNStatusManager.shared
+        _ = AgentSessionManager.shared
 
         NotificationCenter.default.addObserver(
             self,
