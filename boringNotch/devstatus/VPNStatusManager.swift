@@ -77,8 +77,10 @@ final class VPNStatusManager: ObservableObject {
                       .trimmingCharacters(in: .whitespacesAndNewlines),
                   !ip.isEmpty
             else { return }
-            guard !Task.isCancelled else { return }
-            await MainActor.run { self?.egressIP = ip }
+            await MainActor.run {
+                guard !Task.isCancelled else { return }
+                self?.egressIP = ip
+            }
         }
     }
 }
