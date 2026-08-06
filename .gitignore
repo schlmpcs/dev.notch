@@ -53,3 +53,6 @@ build/
 *.xcarchive
 *.dSYM
 
+
+# Superpowers SDD scratch
+.superpowers/
