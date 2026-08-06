@@ -289,6 +289,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Defaults[.homeMiddlePanel] = migration.panel
         Defaults[.didMigrateCalendarPanel] = migration.didMigrate
 
+        _ = VPNStatusManager.shared
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenConfigurationDidChange),
