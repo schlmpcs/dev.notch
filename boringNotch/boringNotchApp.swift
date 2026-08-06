@@ -281,6 +281,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
 
+        let migration = HomeMiddlePanelMigration.migrate(
+            didMigrate: Defaults[.didMigrateCalendarPanel],
+            legacyShowCalendar: Defaults[.showCalendar],
+            current: Defaults[.homeMiddlePanel]
+        )
+        Defaults[.homeMiddlePanel] = migration.panel
+        Defaults[.didMigrateCalendarPanel] = migration.didMigrate
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenConfigurationDidChange),

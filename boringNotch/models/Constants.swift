@@ -68,6 +68,8 @@ enum OptionKeyAction: String, CaseIterable, Identifiable, Defaults.Serializable 
     var id: String { self.rawValue }
 }
 
+extension HomeMiddlePanel: Defaults.Serializable {}
+
 extension Defaults.Keys {
     // MARK: General
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
@@ -106,7 +108,7 @@ extension Defaults.Keys {
 
     static let showNotHumanFace = Key<Bool>("showNotHumanFace", default: false)
     static let tileShowLabels = Key<Bool>("tileShowLabels", default: false)
-    static let showCalendar = Key<Bool>("showCalendar", default: false)
+    static let showCalendar = Key<Bool>("showCalendar", default: false) // legacy, migrated into homeMiddlePanel
     static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)
     static let sliderColor = Key<SliderColorEnum>(
         "sliderUseAlbumArtColor",
@@ -199,4 +201,23 @@ extension Defaults.Keys {
     }
 
     static let didClearLegacyURLCacheV1 = Key<Bool>("didClearLegacyURLCache_v1", default: false)
+
+    // MARK: Dev status
+    /// Which panel occupies the middle slot of the open notch home view.
+    /// Defaults to .agents for fresh installs; existing installs are migrated
+    /// from the legacy showCalendar key on first launch.
+    static let homeMiddlePanel = Key<HomeMiddlePanel>("homeMiddlePanel", default: .agents)
+    static let didMigrateCalendarPanel = Key<Bool>("didMigrateCalendarPanel", default: false)
+
+    static let showVPNDot = Key<Bool>("showVPNDot", default: true)
+    /// Whole interface names to exclude, comma or space separated. iCloud Private
+    /// Relay and an idle Tailscale daemon both create utun devices.
+    static let vpnIgnoredInterfaces = Key<String>("vpnIgnoredInterfaces", default: "")
+    /// Off by default: this makes an outbound request to a third party on every
+    /// network change, so it is the user's call.
+    static let showVPNEgressIP = Key<Bool>("showVPNEgressIP", default: false)
+
+    static let showAgentDot = Key<Bool>("showAgentDot", default: true)
+    static let agentAlertDuration = Key<Double>("agentAlertDuration", default: 4)
+    static let agentStaleTimeout = Key<Double>("agentStaleTimeout", default: 1800)
 }

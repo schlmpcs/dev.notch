@@ -114,4 +114,28 @@ let pruned = AgentSessionReducer.pruned(
 precondition(pruned.map(\.id) == ["fresh"],
              "a crashed agent must not pin a dot on forever")
 
+// MARK: - HomeMiddlePanelMigration
+
+let fresh = HomeMiddlePanelMigration.migrate(
+    didMigrate: false, legacyShowCalendar: false, current: .agents)
+precondition(fresh.panel == .none,
+             "a user who had the calendar off keeps an empty middle slot")
+precondition(fresh.didMigrate == true)
+
+let hadCalendar = HomeMiddlePanelMigration.migrate(
+    didMigrate: false, legacyShowCalendar: true, current: .agents)
+precondition(hadCalendar.panel == .calendar,
+             "a user who had the calendar on keeps the calendar")
+precondition(hadCalendar.didMigrate == true)
+
+let alreadyDone = HomeMiddlePanelMigration.migrate(
+    didMigrate: true, legacyShowCalendar: true, current: .agents)
+precondition(alreadyDone.panel == .agents,
+             "migration is idempotent and must never overwrite a later user choice")
+precondition(alreadyDone.didMigrate == true)
+
+precondition(HomeMiddlePanel(rawValue: "calendar") == .calendar,
+             "raw values are stable, they are persisted in user defaults")
+precondition(HomeMiddlePanel.allCases.count == 3)
+
 print("self-checks passed")
