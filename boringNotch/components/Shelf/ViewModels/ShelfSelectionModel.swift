@@ -71,13 +71,18 @@ final class ShelfSelectionModel: ObservableObject {
     // Keep anchor sane if items array changed drastically (optional helper)
     func ensureValidAnchor(in allItems: [ShelfItem]) {
         if let anchor = lastAnchorID, !allItems.contains(where: { $0.id == anchor }) {
-            lastAnchorID = selectedIDs.first
+            // Fall back in display order, not Set order, or shift-select ranges from a random item
+            lastAnchorID = allItems.first(where: { selectedIDs.contains($0.id) })?.id
         }
     }
 
     func reconcileSelection(in allItems: [ShelfItem]) {
         let availableIDs = Set(allItems.map(\.id))
-        selectedIDs.formIntersection(availableIDs)
+        // Assigning through @Published fires objectWillChange even for a no-op mutation,
+        // so only touch selectedIDs when something actually went away.
+        if !selectedIDs.isSubset(of: availableIDs) {
+            selectedIDs.formIntersection(availableIDs)
+        }
         ensureValidAnchor(in: allItems)
     }
 

@@ -12,7 +12,12 @@ final class ShelfStateViewModel: ObservableObject {
     static let shared = ShelfStateViewModel()
 
     @Published private(set) var items: [ShelfItem] = [] {
-        didSet { ShelfPersistenceService.shared.save(items) }
+        didSet {
+            ShelfPersistenceService.shared.save(items)
+            // Prune selection here, at the single point every shrink path routes through,
+            // rather than from a view's onChange (which publishes during a view update).
+            ShelfSelectionModel.shared.reconcileSelection(in: items)
+        }
     }
 
     @Published var isLoading: Bool = false

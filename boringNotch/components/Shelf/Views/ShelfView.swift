@@ -14,8 +14,13 @@ struct ShelfView: View {
     @StateObject var tvm = ShelfStateViewModel.shared
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
-    @State private var deletionShortcutContextID = UUID()
     private let spacing: CGFloat = 8
+
+    // Keyed by screen, not by view instance, so a rebuilt ShelfView reuses its slot
+    // instead of stranding an orphan that keeps the global hotkey armed.
+    private var deletionShortcutScreenKey: String {
+        vm.screenUUID ?? ShelfDeletionShortcutController.primaryScreenKey
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -35,15 +40,11 @@ struct ShelfView: View {
         .onChange(of: selection.isDragging) {
             ShelfDeletionShortcutController.shared.refreshAvailability()
         }
-        .onChange(of: tvm.items) { _, items in
-            selection.reconcileSelection(in: items)
-            ShelfDeletionShortcutController.shared.refreshAvailability()
-        }
         .onAppear {
-            ShelfDeletionShortcutController.shared.activate(contextID: deletionShortcutContextID)
+            ShelfDeletionShortcutController.shared.activate(screen: deletionShortcutScreenKey)
         }
         .onDisappear {
-            ShelfDeletionShortcutController.shared.deactivate(contextID: deletionShortcutContextID)
+            ShelfDeletionShortcutController.shared.deactivate(screen: deletionShortcutScreenKey)
         }
         .quickLookPresenter(using: quickLookService)
     }
@@ -130,11 +131,20 @@ struct ShelfView: View {
     }
 }
 
+/// Arms the shelf deletion shortcut only while a shelf is actually on screen with a selection.
+///
+/// `KeyboardShortcuts.enable` installs a system-wide hotkey, so while it is armed Cmd+Delete is
+/// taken from Finder and every other app. Keeping that window as narrow as possible is the point
+/// of this type: the notch panels return `canBecomeKey = false`, so a local `keyDown` handler or
+/// an `NSEvent` local monitor would never fire and a global hotkey is the only option.
 @MainActor
 private final class ShelfDeletionShortcutController {
     static let shared = ShelfDeletionShortcutController()
 
-    private var activeContextIDs: Set<UUID> = []
+    /// Key used when the notch view model has no display UUID (single-notch path).
+    static let primaryScreenKey = "primary"
+
+    private var activeScreens: Set<String> = []
     private var isShortcutEnabled = false
 
     private init() {
@@ -144,21 +154,43 @@ private final class ShelfDeletionShortcutController {
             }
         }
         KeyboardShortcuts.disable(.removeSelectedShelfItems)
+
+        // A window torn down with its display never gets `onDisappear`, which would otherwise
+        // leave the hotkey armed for good. Screen changes are the one teardown SwiftUI can miss.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                ShelfDeletionShortcutController.shared.pruneDetachedScreens()
+            }
+        }
     }
 
-    func activate(contextID: UUID) {
-        activeContextIDs.insert(contextID)
+    func activate(screen: String) {
+        activeScreens.insert(screen)
         refreshAvailability()
     }
 
-    func deactivate(contextID: UUID) {
-        activeContextIDs.remove(contextID)
+    func deactivate(screen: String) {
+        activeScreens.remove(screen)
         refreshAvailability()
+
+        // Selection is what arms the hotkey, and it is meaningless once no shelf is visible.
+        // Deferred so this never publishes from inside the disappearing view's update.
+        if activeScreens.isEmpty {
+            Task { @MainActor in
+                guard ShelfDeletionShortcutController.shared.activeScreens.isEmpty,
+                      ShelfSelectionModel.shared.hasSelection else { return }
+                ShelfSelectionModel.shared.clear()
+            }
+        }
     }
 
     func refreshAvailability() {
         let selection = ShelfSelectionModel.shared
-        let hasVisibleSelection = !activeContextIDs.isEmpty
+        let hasVisibleSelection = !activeScreens.isEmpty
             && !selection.isDragging
             && !selection.selectedItems(in: ShelfStateViewModel.shared.items).isEmpty
 
@@ -172,8 +204,15 @@ private final class ShelfDeletionShortcutController {
         }
     }
 
+    private func pruneDetachedScreens() {
+        var liveKeys = Set(NSScreen.screens.compactMap { $0.displayUUID })
+        liveKeys.insert(Self.primaryScreenKey)
+        activeScreens.formIntersection(liveKeys)
+        refreshAvailability()
+    }
+
     private func removeSelectedItems() {
-        guard !activeContextIDs.isEmpty, !ShelfSelectionModel.shared.isDragging else { return }
+        guard !activeScreens.isEmpty, !ShelfSelectionModel.shared.isDragging else { return }
         ShelfActionService.removeSelected()
         refreshAvailability()
     }
