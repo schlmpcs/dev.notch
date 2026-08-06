@@ -63,6 +63,12 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
+        if coordinator.expandingView.show == false,
+           AgentSessionManager.shared.pendingAlert != nil,
+           vm.notchState == .closed, !vm.hideOnClosed {
+            return 640
+        }
+
         if coordinator.expandingView.type == .battery && coordinator.expandingView.show
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
@@ -298,6 +304,14 @@ struct ContentView: View {
                             .frame(width: 76, alignment: .trailing)
                         }
                         .frame(height: vm.effectiveClosedNotchHeight, alignment: .center)
+                      } else if let alert = agents.pendingAlert, vm.notchState == .closed, !vm.hideOnClosed {
+                          AgentAlertView(session: alert)
+                              .transition(.opacity)
+                              .task(id: alert.id) {
+                                  try? await Task.sleep(for: .seconds(Defaults[.agentAlertDuration]))
+                                  guard !Task.isCancelled else { return }
+                                  agents.dismissAlert()
+                              }
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
