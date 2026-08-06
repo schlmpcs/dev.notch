@@ -45,6 +45,17 @@ enum ShelfActionService {
         ShelfStateViewModel.shared.remove(item)
     }
 
+    static func removeSelected() {
+        let selection = ShelfSelectionModel.shared
+        let selectedItems = selection.selectedItems(in: ShelfStateViewModel.shared.items)
+
+        for item in selectedItems {
+            remove(item)
+        }
+
+        selection.clear()
+    }
+
     private static func handleBookmarkedFile(_ bookmarkData: Data, action: @escaping @Sendable (URL) -> Void) {
         Task {
             let bookmark = Bookmark(data: bookmarkData)
@@ -56,4 +67,3 @@ enum ShelfActionService {
         }
     }
 }
-

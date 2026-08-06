@@ -7,12 +7,14 @@
 
 import SwiftUI
 import AppKit
+import KeyboardShortcuts
 
 struct ShelfView: View {
     @EnvironmentObject var vm: BoringViewModel
     @StateObject var tvm = ShelfStateViewModel.shared
     @StateObject var selection = ShelfSelectionModel.shared
     @StateObject private var quickLookService = QuickLookService()
+    @State private var deletionShortcutContextID = UUID()
     private let spacing: CGFloat = 8
 
     var body: some View {
@@ -28,6 +30,20 @@ struct ShelfView: View {
         // Bind Quick Look to shelf selection
         .onChange(of: selection.selectedIDs) {
             updateQuickLookSelection()
+            ShelfDeletionShortcutController.shared.refreshAvailability()
+        }
+        .onChange(of: selection.isDragging) {
+            ShelfDeletionShortcutController.shared.refreshAvailability()
+        }
+        .onChange(of: tvm.items) { _, items in
+            selection.reconcileSelection(in: items)
+            ShelfDeletionShortcutController.shared.refreshAvailability()
+        }
+        .onAppear {
+            ShelfDeletionShortcutController.shared.activate(contextID: deletionShortcutContextID)
+        }
+        .onDisappear {
+            ShelfDeletionShortcutController.shared.deactivate(contextID: deletionShortcutContextID)
         }
         .quickLookPresenter(using: quickLookService)
     }
@@ -111,5 +127,54 @@ struct ShelfView: View {
         .onAppear {
             ShelfStateViewModel.shared.cleanupInvalidItems()
         }
+    }
+}
+
+@MainActor
+private final class ShelfDeletionShortcutController {
+    static let shared = ShelfDeletionShortcutController()
+
+    private var activeContextIDs: Set<UUID> = []
+    private var isShortcutEnabled = false
+
+    private init() {
+        KeyboardShortcuts.onKeyDown(for: .removeSelectedShelfItems) {
+            Task { @MainActor in
+                ShelfDeletionShortcutController.shared.removeSelectedItems()
+            }
+        }
+        KeyboardShortcuts.disable(.removeSelectedShelfItems)
+    }
+
+    func activate(contextID: UUID) {
+        activeContextIDs.insert(contextID)
+        refreshAvailability()
+    }
+
+    func deactivate(contextID: UUID) {
+        activeContextIDs.remove(contextID)
+        refreshAvailability()
+    }
+
+    func refreshAvailability() {
+        let selection = ShelfSelectionModel.shared
+        let hasVisibleSelection = !activeContextIDs.isEmpty
+            && !selection.isDragging
+            && !selection.selectedItems(in: ShelfStateViewModel.shared.items).isEmpty
+
+        guard hasVisibleSelection != isShortcutEnabled else { return }
+        isShortcutEnabled = hasVisibleSelection
+
+        if hasVisibleSelection {
+            KeyboardShortcuts.enable(.removeSelectedShelfItems)
+        } else {
+            KeyboardShortcuts.disable(.removeSelectedShelfItems)
+        }
+    }
+
+    private func removeSelectedItems() {
+        guard !activeContextIDs.isEmpty, !ShelfSelectionModel.shared.isDragging else { return }
+        ShelfActionService.removeSelected()
+        refreshAvailability()
     }
 }

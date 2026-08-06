@@ -541,8 +541,7 @@ final class ShelfItemViewModel: ObservableObject {
                 }
 
             case "Remove":
-                let selected = ShelfSelectionModel.shared.selectedItems(in: ShelfStateViewModel.shared.items)
-                for it in selected { ShelfActionService.remove(it) }
+                ShelfActionService.removeSelected()
                 
             case "Remove Background":
                 handleRemoveBackground()
