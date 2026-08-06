@@ -39,6 +39,11 @@ struct ContentView: View {
 
     @Default(.showNotHumanFace) var showNotHumanFace
 
+    // Unused directly, but declaring them makes body observe these keys so the
+    // status dot strip width updates immediately when either toggle changes.
+    @Default(.showVPNDot) var showVPNDot
+    @Default(.showAgentDot) var showAgentDot
+
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
 
@@ -85,7 +90,7 @@ struct ContentView: View {
             chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         }
 
-        if StatusDots.anyActive {
+        if StatusDots.anyActive && !vm.hideOnClosed {
             chinWidth += 2 * StatusDots.stripWidth
         }
 
@@ -111,7 +116,7 @@ struct ContentView: View {
                         ? (cornerRadiusInsets.opened.top) : (cornerRadiusInsets.opened.bottom)
                         : cornerRadiusInsets.closed.bottom
                     )
-                    .padding(.horizontal, vm.notchState == .closed && StatusDots.anyActive
+                    .padding(.horizontal, vm.notchState == .closed && !vm.hideOnClosed && StatusDots.anyActive
                                           ? StatusDots.stripWidth : 0)
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
                     .background(.black)
@@ -123,7 +128,7 @@ struct ContentView: View {
                             .padding(.horizontal, topCornerRadius)
                     }
                     .overlay(alignment: .top) {
-                        if vm.notchState == .closed {
+                        if vm.notchState == .closed && !vm.hideOnClosed {
                             StatusDotsOverlay()
                                 .padding(.horizontal, 4)
                         }

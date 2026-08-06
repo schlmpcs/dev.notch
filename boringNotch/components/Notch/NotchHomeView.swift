@@ -444,10 +444,7 @@ struct NotchHomeView: View {
                spacing: (shouldShowCamera && Defaults[.homeMiddlePanel] != .none) ? 10 : 15) {
             MusicPlayerView(albumArtNamespace: albumArtNamespace)
 
-            switch Defaults[.homeMiddlePanel] {
-            case .none:
-                EmptyView()
-            case .calendar:
+            if Defaults[.homeMiddlePanel] == .calendar {
                 CalendarView()
                     .frame(width: shouldShowCamera ? 170 : 215)
                     .onHover { isHovering in
@@ -455,9 +452,14 @@ struct NotchHomeView: View {
                     }
                     .environmentObject(vm)
                     .transition(.opacity)
-            case .agents:
+            } else if Defaults[.homeMiddlePanel] == .agents {
                 AgentPanelView()
                     .frame(width: shouldShowCamera ? 170 : 215)
+                    // isHoveringCalendar is an upstream property that gates handleUpGesture;
+                    // it now covers whichever panel occupies the middle slot, not just the calendar.
+                    .onHover { isHovering in
+                        vm.isHoveringCalendar = isHovering
+                    }
                     .transition(.opacity)
             }
 

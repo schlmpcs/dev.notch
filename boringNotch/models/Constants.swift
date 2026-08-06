@@ -204,8 +204,10 @@ extension Defaults.Keys {
 
     // MARK: Dev status
     /// Which panel occupies the middle slot of the open notch home view.
-    /// Defaults to .agents for fresh installs; existing installs are migrated
-    /// from the legacy showCalendar key on first launch.
+    /// The stored default here is superseded on first launch by a one-time
+    /// migration from the legacy showCalendar key: it yields .calendar for a
+    /// user who had the calendar on, and .none otherwise (including every
+    /// fresh install, since showCalendar defaults to false).
     static let homeMiddlePanel = Key<HomeMiddlePanel>("homeMiddlePanel", default: .agents)
     static let didMigrateCalendarPanel = Key<Bool>("didMigrateCalendarPanel", default: false)
 
