@@ -77,6 +77,10 @@ struct ContentView: View {
             chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         }
 
+        if StatusDots.anyActive {
+            chinWidth += 2 * StatusDots.stripWidth
+        }
+
         return chinWidth
     }
 
@@ -107,6 +111,12 @@ struct ContentView: View {
                             .fill(.black)
                             .frame(height: 1)
                             .padding(.horizontal, topCornerRadius)
+                    }
+                    .overlay(alignment: .top) {
+                        if vm.notchState == .closed {
+                            StatusDotsOverlay()
+                                .padding(.horizontal, 4)
+                        }
                     }
                     .shadow(
                         color: ((vm.notchState == .open || isHovering) && Defaults[.enableShadow])
