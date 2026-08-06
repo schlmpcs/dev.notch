@@ -39,6 +39,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Calendar") {
                     Label("Calendar", systemImage: "calendar")
                 }
+                NavigationLink(value: "Dev Status") {
+                    Label("Dev Status", systemImage: "shield.lefthalf.filled")
+                }
                 NavigationLink(value: "HUD") {
                     Label("HUDs", systemImage: "dial.medium.fill")
                 }
@@ -79,6 +82,8 @@ struct SettingsView: View {
                     Media()
                 case "Calendar":
                     CalendarSettings()
+                case "Dev Status":
+                    DevStatusSettings()
                 case "HUD":
                     HUD()
                 case "Battery":
@@ -709,15 +714,17 @@ struct Media: View {
 
 struct CalendarSettings: View {
     @ObservedObject private var calendarManager = CalendarManager.shared
-    @Default(.showCalendar) var showCalendar: Bool
+    @Default(.homeMiddlePanel) var homeMiddlePanel: HomeMiddlePanel
     @Default(.hideCompletedReminders) var hideCompletedReminders
     @Default(.hideAllDayEvents) var hideAllDayEvents
     @Default(.autoScrollToNextEvent) var autoScrollToNextEvent
 
     var body: some View {
         Form {
-            Defaults.Toggle(key: .showCalendar) {
-                Text("Show calendar")
+            Picker("Middle panel", selection: $homeMiddlePanel) {
+                ForEach(HomeMiddlePanel.allCases) { panel in
+                    Text(panel.displayName).tag(panel)
+                }
             }
             Defaults.Toggle(key: .hideCompletedReminders) {
                 Text("Hide completed reminders")
@@ -762,7 +769,7 @@ struct CalendarSettings: View {
                                 Text(calendar.title)
                             }
                             .accentColor(lighterColor(from: calendar.color))
-                            .disabled(!showCalendar)
+                            .disabled(homeMiddlePanel != .calendar)
                         }
                     }
                 }
@@ -798,7 +805,7 @@ struct CalendarSettings: View {
                                 Text(calendar.title)
                             }
                             .accentColor(lighterColor(from: calendar.color))
-                            .disabled(!showCalendar)
+                            .disabled(homeMiddlePanel != .calendar)
                         }
                     }
                 }
