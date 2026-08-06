@@ -35,6 +35,14 @@ already shows.
   empty.
 - The open notch has two tabs (`boringNotch/enums/generic.swift:27`,
   `boringNotch/components/Tabs/TabSelectionView.swift:17`).
+- The open notch is a fixed 640x190 (`boringNotch/sizing/matters.swift:16`), and its
+  home layout is a three-slot `HStack` that is already full when music, calendar, and
+  camera are all showing (`NotchHomeView.swift:442-466`).
+- `showCalendar` already defaults to `false` (`Constants.swift:109`) and already has a
+  settings toggle. The middle slot is therefore free by default on a fresh install.
+- This repository is a fork of `TheBoredTeam/boring.notch` and also pushes to
+  `schlmpcs/dev.notch`. Deleting upstream files creates recurring merge conflicts, so
+  the design adds and gates rather than removes.
 - App bundle identifier is `theboringteam.boringnotch`. Its data container is
   `~/Library/Containers/theboringteam.boringnotch/Data/`.
 - The repository has no test target. All 8 targets are the app or the XPC service.
@@ -269,10 +277,42 @@ hook message. It then collapses back to the trailing dot.
 This is a new branch in the chain at `ContentView.swift:260`, placed directly below the
 battery-notification branch, and structurally identical to it.
 
-### Open notch
+### Open notch: the middle slot
 
-A section inside `NotchHomeView`, rendered only when at least one session exists. One
-row per session: tool icon, `basename(cwd)`, state, message, clickable to focus.
+The open notch is a fixed 640x190 (`boringNotch/sizing/matters.swift:16`).
+`NotchHomeView.mainContent` (`NotchHomeView.swift:442-466`) is a three-slot `HStack`:
+music player, then an optional calendar at 170-215pt, then an optional camera preview.
+Music plus calendar plus camera already consumes the full 640. There is no room for a
+fourth panel, so the agent list **claims the middle slot** rather than being appended.
+
+Replace the `showCalendar` boolean with a one-of enum:
+
+```swift
+enum HomeMiddlePanel: String, CaseIterable, Defaults.Serializable {
+    case none, calendar, agents
+}
+```
+
+`mainContent` switches on it, rendering exactly one middle panel. The existing camera
+`if` and the `shouldHideEdges` / spacing expressions at `NotchHomeView.swift:232` and
+`:443` change from `Defaults[.showCalendar]` to `Defaults[.homeMiddlePanel] != .none`.
+
+**Migration.** `showCalendar` already exists and already defaults to `false`
+(`Constants.swift:109`), with a live Settings toggle at `SettingsView.swift:719`. On
+first launch after upgrade, read the old key once: `true` maps to `.calendar`, `false`
+maps to `.none`, and the old key is then cleared. Users who had the calendar on keep it.
+
+Calendar code is **not deleted**. `CalendarManager`, `CalendarServiceProviding`,
+`components/Calendar/*`, and the `personal-information.calendars` entitlement all stay.
+This repository is a fork tracking `TheBoredTeam/boring.notch`, and deleting those files
+would conflict on every upstream merge that touches them. The enum makes the calendar
+one option among several, which costs nothing to keep.
+
+### Agent panel contents
+
+One row per session: tool icon, `basename(cwd)`, state, message, clickable to focus.
+Empty state when no sessions are active, so the slot does not collapse and reflow the
+`HStack` every time an agent starts or stops.
 
 No new tab. `NotchViews` and `TabSelectionView` are untouched.
 
@@ -289,6 +329,12 @@ One new `SettingsEnum` case, with a matching pane and `Defaults.Keys` entries in
 | Show agent dot | on |
 | Blocked-alert duration | 4s |
 | Session staleness timeout | 30 min |
+| Home middle panel | `.agents` for new installs, migrated from `showCalendar` otherwise |
+
+The middle-panel picker replaces the existing "Show calendar" toggle in the settings
+pane. The two calendar sub-options currently gated by `.disabled(!showCalendar)`
+(`SettingsView.swift:765` and `:801`) become gated on the picker being set to
+`.calendar`.
 
 Plus a read-only live readout of the detected primary interface, and the **Copy hook
 config** button.
