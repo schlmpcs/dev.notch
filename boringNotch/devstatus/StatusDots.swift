@@ -46,7 +46,7 @@ struct StatusDotsOverlay: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            dot(color: .green, visible: showVPNDot && vpn.isTunneled, pulsing: false)
+            dot(color: .blue, visible: showVPNDot && vpn.isTunneled, pulsing: false)
                 .frame(width: StatusDots.stripWidth)
             Spacer(minLength: 0)
             dot(color: agentColor,
