@@ -4,6 +4,12 @@
 <dict>
 	<key>com.apple.security.app-sandbox</key>
 	<true/>
+	<!-- Hardened runtime enforces library validation, which rejects the ad-hoc
+	     signed nested frameworks an unsigned local build produces (no
+	     DEVELOPMENT_TEAM, so nothing shares a team identifier). Remove this
+	     before notarizing a distribution build signed with a real identity. -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
 	<key>com.apple.security.device.camera</key>
