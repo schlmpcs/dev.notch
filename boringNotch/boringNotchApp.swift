@@ -16,6 +16,7 @@ import SwiftUI
 struct DynamicNotchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Default(.menubarIcon) var showMenuBarIcon
+    @Default(.keepDisplayAwake) var keepDisplayAwake
     @Environment(\.openWindow) var openWindow
 
     let updaterController: SPUStandardUpdaterController
@@ -37,6 +38,8 @@ struct DynamicNotchApp: App {
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
             CheckForUpdatesView(updater: updaterController.updater)
+            Divider()
+            Toggle("Keep Display Awake", isOn: $keepDisplayAwake)
             Divider()
             Button("Restart Boring Notch") {
                 ApplicationRelauncher.restart()
@@ -291,6 +294,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         _ = VPNStatusManager.shared
         _ = AgentSessionManager.shared
+        _ = KeepAwakeManager.shared
 
         NotificationCenter.default.addObserver(
             self,

@@ -74,6 +74,21 @@ struct DevStatusSettings: View {
                 }
             }
 
+            Section(header: Text("Keep awake")) {
+                Defaults.Toggle(key: .keepDisplayAwake) {
+                    Text("Keep display awake")
+                }
+                Defaults.Toggle(key: .showKeepAwakeButton) {
+                    Text("Show button in notch")
+                }
+                Defaults.Toggle(key: .showKeepAwakeGlyph) {
+                    Text("Show full moon on closed notch")
+                }
+                Text("Same as caffeinate -d: the display and the Mac stay awake until you turn it off. Released automatically if the app quits.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section(header: Text("Agents")) {
                 Defaults.Toggle(key: .showAgentDot) {
                     Text("Show agent dot")

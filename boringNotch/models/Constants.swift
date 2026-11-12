@@ -222,4 +222,10 @@ extension Defaults.Keys {
     static let showAgentDot = Key<Bool>("showAgentDot", default: true)
     static let agentAlertDuration = Key<Double>("agentAlertDuration", default: 4)
     static let agentStaleTimeout = Key<Double>("agentStaleTimeout", default: 1800)
+
+    /// The user's keep-awake choice. Persisted so it survives the restart install.sh
+    /// does on every push; KeepAwakeManager re-acquires the assertion at launch.
+    static let keepDisplayAwake = Key<Bool>("keepDisplayAwake", default: false)
+    static let showKeepAwakeButton = Key<Bool>("showKeepAwakeButton", default: true)
+    static let showKeepAwakeGlyph = Key<Bool>("showKeepAwakeGlyph", default: true)
 }

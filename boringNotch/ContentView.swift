@@ -25,6 +25,7 @@ struct ContentView: View {
     @ObservedObject var volumeManager = VolumeManager.shared
     @ObservedObject private var vpn = VPNStatusManager.shared
     @ObservedObject private var agents = AgentSessionManager.shared
+    @ObservedObject private var keepAwake = KeepAwakeManager.shared
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -40,9 +41,10 @@ struct ContentView: View {
     @Default(.showNotHumanFace) var showNotHumanFace
 
     // Unused directly, but declaring them makes body observe these keys so the
-    // status dot strip width updates immediately when either toggle changes.
+    // status strip width updates immediately when any of these toggles change.
     @Default(.showVPNDot) var showVPNDot
     @Default(.showAgentDot) var showAgentDot
+    @Default(.showKeepAwakeGlyph) var showKeepAwakeGlyph
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)

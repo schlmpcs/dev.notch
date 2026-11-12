@@ -13,6 +13,8 @@ struct BoringHeader: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
     @StateObject var tvm = ShelfStateViewModel.shared
+    @ObservedObject var keepAwake = KeepAwakeManager.shared
+    @Default(.showKeepAwakeButton) var showKeepAwakeButton
     var body: some View {
         HStack(spacing: 0) {
             HStack {
@@ -42,6 +44,31 @@ struct BoringHeader: View {
                         OpenNotchHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon)
                             .transition(.scale(scale: 0.8).combined(with: .opacity))
                     } else {
+                        if showKeepAwakeButton {
+                            Button(action: {
+                                keepAwake.toggle()
+                            }) {
+                                Capsule()
+                                    .fill(.black)
+                                    .frame(width: 30, height: 30)
+                                    .overlay {
+                                        if keepAwake.isActive {
+                                            KeepAwakeMoon()
+                                                .frame(width: 14, height: 14)
+                                                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                                        } else {
+                                            Image(systemName: "moon.zzz")
+                                                .foregroundColor(.white)
+                                                .imageScale(.medium)
+                                                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                                        }
+                                    }
+                                    .animation(.smooth(duration: 0.25), value: keepAwake.isActive)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .help(keepAwake.isActive ? "Keeping display awake. Click to allow sleep."
+                                                     : "Keep display awake")
+                        }
                         if Defaults[.showMirror] {
                             Button(action: {
                                 vm.toggleCameraPreview()
