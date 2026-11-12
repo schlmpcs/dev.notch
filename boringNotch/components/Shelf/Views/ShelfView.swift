@@ -91,7 +91,18 @@ struct ShelfView: View {
                 transaction.animation = vm.animation
             }
             .contentShape(Rectangle())
-            .onTapGesture { selection.clear() }
+            .onTapGesture { clearSelectionIfBackgroundClick() }
+    }
+
+    /// The panel's tap region covers the items too, so this gesture also fires for clicks AppKit
+    /// already routed to an item's click view, deselecting whatever that click just selected.
+    /// Hit test the click location to tell an item click from an empty space one.
+    private func clearSelectionIfBackgroundClick() {
+        if let event = NSApp.currentEvent, let contentView = event.window?.contentView {
+            let point = contentView.convert(event.locationInWindow, from: nil)
+            if contentView.hitTest(point) is ShelfItemClickTarget { return }
+        }
+        selection.clear()
     }
 
     var content: some View {

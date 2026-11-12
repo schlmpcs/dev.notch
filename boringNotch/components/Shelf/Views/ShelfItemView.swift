@@ -168,6 +168,10 @@ struct ShelfItemView: View {
     
 }
 
+/// Marks the AppKit view that already handles a shelf item's clicks, so the panel's
+/// background tap can tell an item click from an empty space click.
+protocol ShelfItemClickTarget: AnyObject {}
+
 // MARK: - Draggable Click Handler with NSDraggingSource
 private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
     let item: ShelfItem
@@ -211,7 +215,7 @@ private struct DraggableClickHandler<Content: View>: NSViewRepresentable {
         return viewModel.thumbnail ?? item.icon
     }
     
-    final class DraggableClickView: NSView, NSDraggingSource {
+    final class DraggableClickView: NSView, NSDraggingSource, ShelfItemClickTarget {
         var item: ShelfItem!
         weak var viewModel: ShelfItemViewModel?
         var dragPreviewImage: NSImage?
