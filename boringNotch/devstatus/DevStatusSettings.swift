@@ -15,7 +15,20 @@ struct DevStatusSettings: View {
     @Default(.agentAlertDuration) private var alertDuration
     @Default(.agentStaleTimeout) private var staleTimeout
     @State private var copiedConfig = false
+    @State private var copiedCodexConfig = false
     @State private var copiedDequarantine = false
+
+    /// Copies and flips the button label back after a beat, so the three copy
+    /// buttons do not each carry their own clipboard-and-timer block.
+    private func copy(_ text: String, into flag: Binding<Bool>) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        flag.wrappedValue = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            flag.wrappedValue = false
+        }
+    }
 
     var body: some View {
         Form {
@@ -74,30 +87,22 @@ struct DevStatusSettings: View {
             }
 
             Section(header: Text("Hook setup")) {
-                Text("Add this to ~/.claude/settings.json, then restart your agent.")
+                Text("Add the Claude config to ~/.claude/settings.json, the Codex config to ~/.codex/hooks.json, then restart your agent. Codex asks you to trust a hook the first time it runs one.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack {
-                    Button(copiedConfig ? "Copied" : "Copy hook config") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(
-                            AgentSessionManager.shared.hookConfigSnippet, forType: .string)
-                        copiedConfig = true
-                        Task {
-                            try? await Task.sleep(for: .seconds(2))
-                            copiedConfig = false
-                        }
+                    Button(copiedConfig ? "Copied" : "Copy Claude hook config") {
+                        copy(AgentSessionManager.shared.hookConfigSnippet, into: $copiedConfig)
                     }
+                    Button(copiedCodexConfig ? "Copied" : "Copy Codex hook config") {
+                        copy(AgentSessionManager.shared.codexHookConfigSnippet,
+                             into: $copiedCodexConfig)
+                    }
+                }
+                HStack {
                     Button(copiedDequarantine ? "Copied" : "Copy de-quarantine command") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(
-                            "xattr -d com.apple.quarantine '\(AgentSessionManager.shared.hookScriptPath)'",
-                            forType: .string)
-                        copiedDequarantine = true
-                        Task {
-                            try? await Task.sleep(for: .seconds(2))
-                            copiedDequarantine = false
-                        }
+                        copy("xattr -d com.apple.quarantine '\(AgentSessionManager.shared.hookScriptPath)'",
+                             into: $copiedDequarantine)
                     }
                 }
                 Text("macOS blocks execution of files this sandboxed app writes, so the hook fails the first time an agent invokes it until this command has been run once in Terminal. It only needs to be run again after an app update changes the script.")

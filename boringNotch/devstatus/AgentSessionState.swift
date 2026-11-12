@@ -77,7 +77,10 @@ public enum AgentHookPayload {
         return .upsert(AgentSession(
             id: id,
             tool: tool ?? "claude",
-            state: state(for: event),
+            state: state(
+                for: event,
+                notificationType: json["notification_type"] as? String
+            ),
             message: json["message"] as? String,
             cwd: json["cwd"] as? String ?? "",
             termProgram: termProgram,
@@ -89,9 +92,20 @@ public enum AgentHookPayload {
     /// Maps a hook event name to a session state. Unrecognised events degrade to
     /// `.working` rather than being dropped, so a renamed or newly added agent hook
     /// keeps the session visible instead of making it silently vanish.
-    static func state(for event: String) -> AgentState {
+    ///
+    /// Claude Code and Codex share the payload shape and `Stop`/`SessionEnd`, but
+    /// name the "waiting on you" event differently. Claude's `Notification` hook
+    /// also carries informational notifications, so only the types that actually
+    /// need input are blocked. Older payloads without a type retain the original
+    /// blocked behavior.
+    static func state(for event: String, notificationType: String? = nil) -> AgentState {
         switch event {
-        case "Notification": return .blocked
+        case "Notification":
+            guard let notificationType else { return .blocked }
+            return AgentHookConfiguration.isBlockingNotification(notificationType)
+                ? .blocked
+                : .working
+        case "PermissionRequest": return .blocked
         case "Stop": return .done
         default: return .working
         }

@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 OUT="$(mktemp -d)/selfcheck"
 swiftc -o "$OUT" \
   boringNotch/devstatus/VPNClassifier.swift \
+  boringNotch/devstatus/AgentHookConfiguration.swift \
   boringNotch/devstatus/AgentSessionState.swift \
   boringNotch/devstatus/HomeMiddlePanel.swift \
   Scripts/selfcheck/main.swift

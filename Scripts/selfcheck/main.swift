@@ -46,6 +46,18 @@ precondition(blocked.state == .blocked, "Notification maps to blocked")
 precondition(blocked.message == "needs approval")
 precondition(blocked.updatedAt == t0)
 
+let nonBlockingNotificationRaw = """
+claude vscode ttys004
+{"session_id":"abc123","cwd":"/Users/me/proj","hook_event_name":"Notification","notification_type":"auth_success","message":"Signed in"}
+"""
+guard case .upsert(let nonBlockingNotification)? = AgentHookPayload.parse(
+    nonBlockingNotificationRaw, now: t0
+) else {
+    fatalError("a non-blocking Claude notification should upsert the session")
+}
+precondition(nonBlockingNotification.state == .working,
+             "non-blocking Claude notifications must not look like user prompts")
+
 let stopRaw = """
 claude vscode ttys004
 {"session_id":"abc123","cwd":"/Users/me/proj","hook_event_name":"Stop"}
@@ -91,6 +103,65 @@ guard case .upsert(let sparse)? = AgentHookPayload.parse(sparseRaw, now: t0) els
 precondition(sparse.tool == "codex")
 precondition(sparse.termProgram == nil, "? means unknown, stored as nil")
 precondition(sparse.tty == nil, "? means unknown, stored as nil")
+
+// Codex ships the same payload keys as Claude Code but has no Notification event;
+// it raises PermissionRequest when it needs an approval. Body copied verbatim from
+// a real codex 0.146.1 hook invocation.
+let codexBlockedRaw = """
+codex ghostty ttys006
+{"session_id":"019fd6ed-8660-74a3-bf6b-e79c792c9fd1","transcript_path":"/x/rollout.jsonl","cwd":"/Users/me/proj","hook_event_name":"PermissionRequest"}
+"""
+guard case .upsert(let codexBlocked)? = AgentHookPayload.parse(codexBlockedRaw, now: t0) else {
+    fatalError("a Codex hook payload must parse")
+}
+precondition(codexBlocked.state == .blocked, "PermissionRequest is Codex asking for you")
+precondition(codexBlocked.projectName == "proj")
+
+let codexEndRaw = """
+codex ghostty ttys006
+{"session_id":"019fd6ed","transcript_path":"/x/rollout.jsonl","cwd":"/Users/me/proj","hook_event_name":"SessionEnd","reason":"other"}
+"""
+guard case .end(let codexEndedID)? = AgentHookPayload.parse(codexEndRaw, now: t0) else {
+    fatalError("Codex SessionEnd should end the session")
+}
+precondition(codexEndedID == "019fd6ed")
+
+// A waiting state must be followed by hooks that report resumed work. Without
+// these entries, approving a tool or submitting a reply leaves the session
+// blocked until the turn stops.
+let claudeHookConfig = AgentHookConfiguration.snippet(
+    tool: "claude", scriptPath: "/tmp/bn-hook"
+)
+let codexHookConfig = AgentHookConfiguration.snippet(
+    tool: "codex", scriptPath: "/tmp/bn-hook"
+)
+
+func hookGroups(in snippet: String) -> [String: Any] {
+    guard let data = snippet.data(using: .utf8),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let hooks = json["hooks"] as? [String: Any]
+    else { fatalError("generated hook config must be valid JSON") }
+    return hooks
+}
+
+let claudeHookGroups = hookGroups(in: claudeHookConfig)
+let codexHookGroups = hookGroups(in: codexHookConfig)
+let recoveryEvents = ["SessionStart", "UserPromptSubmit", "PreToolUse", "PostToolUse"]
+
+for event in recoveryEvents {
+    precondition(claudeHookGroups[event] != nil,
+                 "Claude config must report resumed work via \(event)")
+    precondition(codexHookGroups[event] != nil,
+                 "Codex config must report resumed work via \(event)")
+}
+
+guard let notificationGroups = claudeHookGroups["Notification"] as? [[String: Any]],
+      let notificationMatcher = notificationGroups.first?["matcher"] as? String
+else { fatalError("Claude notifications must be restricted to waiting types") }
+precondition(notificationMatcher.contains("permission_prompt"))
+precondition(notificationMatcher.contains("idle_prompt"))
+precondition(notificationMatcher.contains("elicitation_dialog"))
+precondition(notificationMatcher.contains("agent_needs_input"))
 
 // MARK: - AgentSessionReducer
 

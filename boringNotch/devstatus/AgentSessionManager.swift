@@ -68,22 +68,15 @@ final class AgentSessionManager: ObservableObject {
 
     /// The block the user pastes into ~/.claude/settings.json.
     var hookConfigSnippet: String {
-        let path = hookScriptPath
-        return """
-        {
-          "hooks": {
-            "Notification": [
-              { "hooks": [{ "type": "command", "command": "'\(path)' claude" }] }
-            ],
-            "Stop": [
-              { "hooks": [{ "type": "command", "command": "'\(path)' claude" }] }
-            ],
-            "SessionEnd": [
-              { "hooks": [{ "type": "command", "command": "'\(path)' claude" }] }
-            ]
-          }
-        }
-        """
+        AgentHookConfiguration.snippet(tool: "claude", scriptPath: hookScriptPath)
+    }
+
+    /// The block the user pastes into ~/.codex/hooks.json. Codex ships the same hook
+    /// schema and the same payload keys as Claude Code, so bn-hook and the parser are
+    /// reused verbatim; only the "waiting on you" event has a different name, because
+    /// Codex has no Notification event and raises PermissionRequest instead.
+    var codexHookConfigSnippet: String {
+        AgentHookConfiguration.snippet(tool: "codex", scriptPath: hookScriptPath)
     }
 
     // MARK: - Lifecycle
