@@ -1,197 +1,126 @@
-<h1 align="center">
-  <br>
-  <a href="http://theboring.name"><img src="https://framerusercontent.com/images/RFK4vs0kn8pRMuOO58JeyoemXA.png?scale-down-to=256" alt="Boring Notch" width="150"></a>
-  <br>
-  Boring Notch
-  <br>
-</h1>
+# dev.notch
 
+A fork of [Boring Notch](https://github.com/TheBoredTeam/boring.notch) that turns the MacBook notch into a status strip for working with coding agents. You can see at a glance whether Claude Code or Codex is working, done, or waiting on you. It also shows when your traffic is going through a VPN, and it has a one-click replacement for `caffeinate -d`.
 
-<p align="center">
-  <a title="Crowdin" target="_blank" href="https://crowdin.com/project/boring-notch"><img src="https://badges.crowdin.net/boring-notch/localized.svg"></a>
-  <img src="https://github.com/TheBoredTeam/boring.notch/actions/workflows/cicd.yml/badge.svg" alt="TheBoringNotch Build & Test" style="margin-right: 10px;" />
-  <a href="https://discord.gg/c8JXA7qrPm">
-    <img src="https://dcbadge.limes.pink/api/server/https://discord.gg/c8JXA7qrPm?style=flat" alt="Discord Badge" />
-  </a>
-  <a href="https://www.ko-fi.com/alexander5015">
-    <img src="https://srv-cdn.himpfen.io/badges/kofi/kofi-flat.svg" alt="Ko-Fi" />
-  </a>
-</p>
+Everything Boring Notch already does still works: the music live activity and visualizer, calendar, the file shelf with AirDrop, system HUD replacement and the webcam mirror. This README covers what the fork adds and how to build it. For the rest, see the [upstream README](https://github.com/TheBoredTeam/boring.notch#readme).
 
-<!--Welcome to **Boring.Notch**, the coolest way to make your MacBook's notch the star of the show! Forget about those boring status bars—our notch turns into a dynamic music control center, complete with a snazzy visualizer and all the music controls you need. It's like having a mini concert right at the top of your screen! -->
+## What the fork adds
 
-Say hello to **Boring Notch**, the coolest way to make your MacBook’s notch the star of the show! Say goodbye to boring status bars: with Boring Notch, your notch transforms into a dynamic music control center, complete with a vibrant visualizer and all the essential music controls you need. But that’s just the start! Boring Notch also offers calendar integration, a handy file shelf with AirDrop support, a complete MacOS HUD replacement and more!
+### Coding agent status (Claude Code and Codex)
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/2d5f69c1-6e7b-4bc2-a6f1-bb9e27cf88a8" alt="Demo GIF" />
-</p>
+- **A dot on the closed notch** (right edge) shows the state of the most urgent session:
+  - **blue**: working
+  - **orange, pulsing**: blocked, waiting for your approval or input
+  - **green**: finished its turn
+- **A heads-up when an agent gets blocked.** The closed notch briefly shows the project name and the agent's message, such as "needs approval". Click it to jump to the window the agent is running in.
+- **An agent panel in the open notch** lists every live session with its project, state and last message. Click a row to focus that session's window.
+- **Window focus** works with VS Code, Cursor, iTerm2, Terminal, Ghostty, WezTerm and Alacritty. With Accessibility permission the exact window is raised. Without it, the app is only brought to the front.
+- **Only real waits count as blocked**: permission prompts, idle prompts and input requests. Informational notifications don't count. A session goes back to "working" as soon as you approve a tool or reply.
+- **Silent sessions are dropped** after 30 minutes. You can change this in settings.
 
-<!--https://github.com/user-attachments/assets/19b87973-4b3a-4853-b532-7e82d1d6b040-->
----
-<!--## Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Roadmap](#-roadmap)
-- [Building from Source](#building-from-source)
-- [Contributing](#-contributing)
-- [Join our Discord Server](#join-our-discord-server)
-- [Star History](#star-history)
-- [Buy us a coffee!](#buy-us-a-coffee)
-- [Acknowledgments](#-acknowledgments)-->
+### VPN dot
 
-## Installation
+A blue dot on the left edge of the closed notch means your default route goes through a tunnel interface (`utun`, `ipsec`, `ppp`, `tun`, `tap`). It reads the route the system actually uses, not just whether a tunnel interface exists, so the dot means "my traffic is tunnelled right now". It listens for network change events instead of polling.
 
-**System Requirements:**
-- macOS **14 Sonoma** or later
-- Apple Silicon or Intel Mac
+- **Ignore list.** iCloud Private Relay and an idle Tailscale daemon also create `utun` devices. Settings shows the current primary interface, so you can add that exact name to the ignore list.
+- **Optional egress IP lookup.** This is off by default because it sends a request to a third party (`api.ipify.org`) on every network change.
 
----
+### Keep display awake
 
-### Option 1: Download and Install Manually
+The in-app equivalent of `caffeinate -d`. While it's on, the display won't dim or sleep, and so neither does the Mac.
 
-<a href="https://github.com/TheBoredTeam/boring.notch/releases/latest/download/boringNotch.dmg" target="_self"><img width="200" src="https://github.com/user-attachments/assets/e3179be1-8416-4b8a-b417-743e1ecc67d6" alt="Download for macOS" /></a>
+- **Ways to toggle it:** the moon button in the open notch header, **Keep Display Awake** in the menu bar menu, or Settings → Dev Status.
+- **A glowing full moon** sits on the left of the closed notch while it's on.
+- **It holds a power assertion directly instead of spawning `caffeinate`.** macOS releases it automatically if the app quits or crashes, so nothing is left keeping your screen on. You can see it with `pmset -g assertions`, listed as "Keep Display Awake".
+- **The choice is remembered** across app restarts.
 
-Once downloaded, open the `.dmg` and move **Boring Notch** to your `/Applications` folder.
+### Smaller changes
 
-> [!IMPORTANT]
-> We don't have an Apple Developer account (yet 👀), so macOS will warn you that Boring Notch is from an unidentified developer on first launch. This is expected behavior.
->
-> You'll need to bypass this before the app will open. You only need to do this once. Use one of the methods below.
+- **Choose the middle panel of the open notch:** none, calendar, or agent sessions.
+- **Shelf:** <kbd>⌘</kbd><kbd>⌫</kbd> removes the selected items, and clicking an item no longer clears the selection.
+- **A Dev Status settings pane** brings all of the above together.
 
----
+## Building and installing
 
-#### Recommended: Terminal (Always Works)
+There are no prebuilt releases of this fork. You build it from source.
 
-This is the quickest and easiest method. It only requires a single command and works consistently for all users. System Settings can sometimes fail and won't work for non-admin users.
-
-After moving Boring Notch to your Applications folder, run:
+**Requirements:** Xcode 26 or later on macOS 15.6 or later to build. The app itself runs on macOS 14 Sonoma or later.
 
 ```bash
-xattr -dr com.apple.quarantine /Applications/boringNotch.app
+git clone https://github.com/schlmpcs/dev.notch.git
+cd dev.notch
+./Scripts/install.sh
 ```
 
-Then open the app normally.
+`install.sh` does the following:
 
----
+1. Builds the Release configuration.
+2. Stops the running copy.
+3. Moves the previous `/Applications/boringNotch.app` to a temporary backup folder and prints its path.
+4. Installs the new build and launches it.
 
-#### Alternative: System Settings
+Run it again whenever you pull changes.
 
 > [!NOTE]
-> This method doesn't work for all users. If this doesn't work, use the Terminal method above.
+> Run the copy in `/Applications`, not the build Xcode launches with <kbd>⌘</kbd><kbd>R</kbd>. If both run at once you get two notches drawing over each other.
 
-1. Try to open the app — you'll see a security warning.
-2. Click **OK** to dismiss it.
-3. Open **System Settings** > **Privacy & Security**.
-4. Scroll to the bottom and click **Open Anyway** next to the Boring Notch warning.
-5. Confirm if prompted.
+The fork keeps upstream's bundle identifier, so it replaces an existing Boring Notch install and picks up its settings.
 
----
+### Optional: reinstall on every push
 
-### Option 2: Install via Homebrew
-
-You can also install using [Homebrew](https://brew.sh). The Homebrew installation automatically bypasses the macOS security warning described above.
+To rebuild and reinstall automatically each time you push, add a `pre-push` hook. It runs in the background, so the push doesn't wait, and it shows a notification if the build fails:
 
 ```bash
-brew install --cask TheBoredTeam/boring-notch/boring-notch
+cat > .git/hooks/pre-push <<'EOF'
+#!/bin/sh
+LOG=/tmp/boringnotch-install.log
+{
+  ./Scripts/install.sh > "$LOG" 2>&1 ||
+    osascript -e "display notification \"Build failed. tail $LOG\" with title \"boringNotch\""
+} </dev/null >/dev/null 2>&1 &
+exit 0
+EOF
+chmod +x .git/hooks/pre-push
 ```
 
-## Usage
+## Setting up agent status
 
-- Launch the app, and voilà—your notch is now the coolest part of your screen.
-- Hover over the notch to see it expand and reveal all its secrets.
-- Use the controls to manage your music like a rockstar.
-- Click the star in your menu bar to customize your notch to your heart's content.
+The agents report their state through a small hook script that the app writes into its own container. You do this setup once.
 
-## 📋 Roadmap
-- [x] Playback live activity 🎧
-- [x] Calendar integration 📆
-- [x] Reminders integration ☑️
-- [x] Mirror 📷
-- [x] Charging indicator and current percentage 🔋
-- [x] Customizable gesture control 👆🏻
-- [x] Shelf functionality with AirDrop 📚
-- [x] Notch sizing customization, finetuning on different display sizes 🖥️
-- [x] System HUD replacements (volume, brightness, backlight) 🎚️💡⌨️
-- [ ] Bluetooth Live Activity (connect/disconnect for bluetooth devices) 
-- [ ] Weather integration ⛅️
-- [ ] Customizable Layout options 🛠️
-- [ ] Lock Screen Widgets 🔒
-- [ ] Extension system 🧩
-- [ ] Notifications (under consideration) 🔔
-<!-- - [ ] Clipboard history manager 📌 `Extension` -->
-<!-- - [ ] Download indicator of different browsers (Safari, Chromium browsers, Firefox) 🌍 `Extension`-->
-<!-- - [ ] Customizable function buttons 🎛️ -->
-<!-- - [ ] App switcher 🪄 -->
+1. Open **Settings → Dev Status → Hook setup**.
+2. Click **Copy Claude hook config** and merge it into the `hooks` section of `~/.claude/settings.json`. For Codex, click **Copy Codex hook config** and merge it into `~/.codex/hooks.json`.
+3. Click **Copy de-quarantine command** and run it once in Terminal. macOS won't run a file that a sandboxed app wrote until it's been de-quarantined. Run it again only if an app update changes the script.
+4. Restart your agent sessions. Codex asks you to trust the hook the first time it runs.
+5. For exact window focus, grant boringNotch **Accessibility** permission in System Settings → Privacy & Security. Boring Notch already asks for this for HUD replacement.
 
-<!-- ## 🧩 Extensions
-> [!NOTE]
-> We’re hard at work on some awesome extensions! Stay tuned, and we’ll keep you updated as soon as they’re released. -->
+### How it works
 
-## Building from Source
+Each hook call writes one event file into a queue folder inside the app's sandbox container:
 
-### Prerequisites
+- **Line 1** is a header with the agent, the terminal and the tty.
+- **The rest** is the agent's JSON payload, passed through unchanged.
 
-- **macOS 15.6 or later**
-- **Xcode 26 or later**
+The app watches that folder, reads each file into memory and deletes it, so nothing piles up on disk. The script needs nothing beyond `/bin/sh`: no `jq`, no Python, no network.
 
-### Installation
+## Development
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/TheBoredTeam/boring.notch.git
-   cd boring.notch
-   ```
+`Scripts/selfcheck.sh` compiles the dependency-free logic on its own and checks it in a few seconds, with no Xcode build:
 
-2. **Open the Project in Xcode**:
-   ```bash
-   open boringNotch.xcodeproj
-   ```
+- VPN interface classification
+- Hook payload parsing for Claude and Codex
+- The session reducers
+- The generated hook configs
 
-3. **Build and Run**:
-    - Click the "Run" button or press `Cmd + R`. Watch the magic unfold!
+```bash
+./Scripts/selfcheck.sh
+```
 
-## 🤝 Contributing
+The fork's code lives in `boringNotch/devstatus/`.
 
-We’re all about good vibes and awesome contributions! Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn how you can join the fun!
+## Credits
 
-## Join our Discord Server
+dev.notch is built on [Boring Notch](https://github.com/TheBoredTeam/boring.notch) by TheBoredTeam and its contributors. All the core notch work is theirs. If you want the original app, prebuilt releases, or a place to contribute to the main project, go there. Boring Notch in turn credits [MediaRemoteAdapter](https://github.com/ungive/mediaremote-adapter) and [NotchDrop](https://github.com/Lakr233/NotchDrop). See [THIRD_PARTY_LICENSES](./THIRD_PARTY_LICENSES) for the full list.
 
-<a href="https://discord.gg/GvYcYpAKTu" target="_blank"><img src="https://iili.io/28m3GHv.png" alt="Join The Boring Server!" style="height: 60px !important;width: 217px !important;" ></a>
+## License
 
-## Star History
-<!-- BROKEN: GitHub now restricts the stargazer API for privacy reasons
-<a href="https://www.star-history.com/#TheBoredTeam/boring.notch&Timeline">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=TheBoredTeam/boring.notch&type=Timeline" />
- </picture>
-</a>
--->
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-dark.svg">
-   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-light.svg">
-   <img src="https://raw.githubusercontent.com/TheBoredTeam/org-star-chart-updater/main/projects/boring.notch/chart-light.svg" alt="TheBoredTeam/boring.notch GitHub star history">
- </picture>
-
-## Support us on Ko-fi!
-<!-- <a href="https://www.buymeacoffee.com/jfxh67wvfxq" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-red.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a> -->
-<a href="https://www.ko-fi.com/alexander5015" target="_blank"><img src="https://github.com/user-attachments/assets//a76175ef-7e93-475a-8b67-4922ba5964c2" alt="Support us on Ko-fi" style="height: 70px !important;width: 346px !important;" ></a>
-
-## 🎉 Acknowledgments
-
-We would like to express our gratitude to the authors and maintainers of the open-source projects that made this possible. 
-
-## Notable Projects
-- **[MediaRemoteAdapter](https://github.com/ungive/mediaremote-adapter)** –  An open-source project that allowed us to use the Now Playing source in macOS 15.4+
-- **[NotchDrop](https://github.com/Lakr233/NotchDrop)** – An open-source project that has been instrumental in developing the first version of the "Shelf" feature in Boring Notch.
-
-For a full list of licenses and attributions, please see the [Third-Party Licenses](./THIRD_PARTY_LICENSES.md) file.
-
-### Icon credits: [@maxtron95](https://github.com/maxtron95)
-### Website credits: [@himanshhhhuv](https://github.com/himanshhhhuv)
-
-- **SwiftUI**: For making us look like coding wizards.
-- **You**: For being awesome and checking out **boring.notch**!
-
-
+GPL-3.0, the same as upstream. See [LICENSE](LICENSE).
